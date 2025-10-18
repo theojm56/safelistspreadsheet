@@ -1,0 +1,46 @@
+# app.py
+import os
+from flask import Flask, jsonify, request
+
+app = Flask(__name__)
+
+@app.route("/")
+def root():
+    return jsonify(ok=True, service="Safelist License Server")
+
+@app.route("/api/health")
+def health():
+    return jsonify(ok=True, path="/api/health")
+
+@app.route("/api/issue", methods=["POST"])
+def issue():
+    data = request.get_json(force=True)
+    # verify secret
+    if data.get("secret") != os.environ.get("SECRET_KEY"):
+        return jsonify(ok=False, error="secret mismatch"), 403
+
+    order_id = str(data.get("order_id", "")).strip()
+    sku = str(data.get("product_sku", "")).strip()
+    if not order_id or not sku:
+        return jsonify(ok=False, error="missing order_id or product_sku"), 400
+
+    # demo key (you can replace with real generator + persistence)
+    key = f"SL-{order_id.replace('-', '')[:4]}-{sku.replace('-', '')[:4]}-TEST"
+    return jsonify(ok=True, key=key)
+
+@app.route("/api/validate", methods=["POST"])
+def validate():
+    data = request.get_json(force=True)
+    key = str(data.get("key", "")).strip()
+    # demo validation rule
+    valid = key.startswith("SL-")
+    return jsonify(valid=valid)
+
+if __name__ == "__main__":
+    # local run: python app.py
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+Flask==3.0.3
+gunicorn==22.0.0
+git add app.py requirements.txt
+git commit -m "Fix Flask app + add requirements"
+git push
